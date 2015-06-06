@@ -11,6 +11,21 @@ extern "C" {
 
 
 static void
+initTimer3(void)
+{
+	PRR1 &= ~_BV(PRTIM3);
+
+	TCCR3A = 0;
+	TCCR3B = _BV(CS11);	// Set prescaler to 8.
+
+	// Now, Timer3 must be prepared for use.
+	TCNT3 = 0;		// Reset the timer counter.
+	TIFR3 |= _BV(OCF3A);	// Drop any existing interrupts on the timer.
+	TIMSK3 |= _BV(OCIE3A);	// Enable Timer3's output compare interrupt.
+}
+
+
+static void
 initTimer1(void)
 {
 	// Disable powersaving mode on Timer1 to enable it.
@@ -23,14 +38,14 @@ initTimer1(void)
 	TCNT1 = 0;		// Reset the timer counter.
 	TIFR1 |= _BV(OCF1A);	// Drop any existing interrupts on the timer.
 	TIMSK1 |= _BV(OCIE1A);	// Enable Timer1's output compare interrupt.
-
 }
+
 
 void
 hardware_init(void)
 {
-	sei();
 	initTimer1();
+	initTimer3();
+	sei();
 }
-
 

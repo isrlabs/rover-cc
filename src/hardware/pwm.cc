@@ -11,7 +11,6 @@ extern "C" {
 // more details.
 
 
-#define CYCLES_PER_US	16
 #define DUTY_CYCLE	20000	// Servo duty cycle is 20ms.
 #define UPDATE_INTERVAL	40000
 #define UPDATE_WAIT	5	// Allow some delay for updates.
