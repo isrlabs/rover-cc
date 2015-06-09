@@ -18,9 +18,10 @@ TARGET =	rover
 SRCDIR =	src
 BUILDDIR =	build
 SOURCES = 	hardware/hardware.cc	\
+		hardware/uart.cc 	\
 		hardware/pwm.cc 	\
 		hardware/drivetrain.cc 	\
-		hardware/strobe.cc
+		hardware/mast.cc
 
 
 ##############
@@ -56,7 +57,7 @@ show-upload-port:
 $(BUILDTARGET).hex: $(BUILDTARGET).elf
 	$(OBJCOPY) -O $(BINFORMAT) -R .eeprom $(BUILDTARGET).elf	\
 	    $(BUILDTARGET).hex
-	$(SIZE) -C $(BUILDTARGET).hex
+	$(SIZE) --mcu $(MCU) -C $(BUILDTARGET).elf
 
 $(BUILDTARGET).elf: $(BUILDDIR) $(SRCDIR)/$(TARGET).cc $(SOURCES)
 	$(CPP) $(CPPFLAGS) -o $(BUILDTARGET).elf $(SOURCES)	\

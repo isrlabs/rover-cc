@@ -13,6 +13,7 @@ extern "C" {
 static void
 initTimer3(void)
 {
+	// Timer3 should only be started by the mast pulse sequence.
 	PRR1 &= ~_BV(PRTIM3);
 
 	TCCR3A = 0;
@@ -42,7 +43,7 @@ initTimer1(void)
 
 
 void
-hardware_init(void)
+hardware::init(void)
 {
 	initTimer1();
 	initTimer3();
