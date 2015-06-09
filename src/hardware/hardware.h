@@ -2,7 +2,10 @@
 #define __HARDWARE_HARDWARE
 
 
-void	hardware_init(void);
+namespace hardware {
 
+	void	init(void);
+
+}
 
 #endif

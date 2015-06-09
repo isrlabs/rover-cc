@@ -17,7 +17,11 @@ SIZE =		avr-size
 TARGET =	rover
 SRCDIR =	src
 BUILDDIR =	build
-SOURCES = 	hardware/hardware.cc hardware/pwm.cc hardware/drivetrain.cc 
+SOURCES = 	hardware/hardware.cc	\
+		hardware/uart.cc 	\
+		hardware/pwm.cc 	\
+		hardware/drivetrain.cc 	\
+		hardware/mast.cc
 
 
 ##############
@@ -28,10 +32,11 @@ PROGRAMMER =	avrisp2
 MCU =		atmega2560
 PART =		m2560
 F_CPU =		16000000
-PORT =		$(shell select-arduino)
+BAUD =		9600
+PORT =		$(shell ls /dev/ttyACM* | head -1)
 BINFORMAT =	ihex
 PGMPROTO =	wiring
-CPPFLAGS =	-O2 -Werror -Wall -DF_CPU=$(F_CPU) -mmcu=$(MCU) -Isrc
+CPPFLAGS =	-Os -Werror -Wall -DF_CPU=$(F_CPU) -mmcu=$(MCU) -Isrc -DBAUD=$(BAUD) -g
 AVRDUDE =	avrdude -D -v -p $(PART) -c $(PROGRAMMER) -P $(PORT)
 SOURCES :=	$(addprefix $(SRCDIR)/, $(SOURCES))
 BUILDTARGET :=	$(addprefix $(BUILDDIR)/, $(TARGET))
@@ -52,7 +57,7 @@ show-upload-port:
 $(BUILDTARGET).hex: $(BUILDTARGET).elf
 	$(OBJCOPY) -O $(BINFORMAT) -R .eeprom $(BUILDTARGET).elf	\
 	    $(BUILDTARGET).hex
-	$(SIZE) -C $(BUILDTARGET).hex
+	$(SIZE) --mcu $(MCU) -C $(BUILDTARGET).elf
 
 $(BUILDTARGET).elf: $(BUILDDIR) $(SRCDIR)/$(TARGET).cc $(SOURCES)
 	$(CPP) $(CPPFLAGS) -o $(BUILDTARGET).elf $(SOURCES)	\

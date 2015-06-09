@@ -5,8 +5,15 @@
 #include <stdint.h>
 
 
-void	pwm_connect(uint8_t which, uint8_t pin);
-void	pwm_trim(uint8_t which, uint16_t trim);
-void	pwm_set_servo(uint8_t which, uint32_t us);
+namespace pwm {
+
+	void		connect(uint8_t which, uint8_t pin);
+	void		trim(uint8_t which, int16_t trim);
+	void		set_limits(uint8_t which, uint16_t min, uint16_t max);
+	void		set_servo(uint8_t which, uint32_t us);
+	uint16_t	get_servo(uint8_t which);
+
+}
+
 
 #endif

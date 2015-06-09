@@ -3,13 +3,15 @@
 #ifndef __HARDWARE_DRIVETRAIN_H
 #define __HARDWARE_DRIVETRAIN_H
 
+namespace drivetrain {
 
-void	drivetrain_init(void);
-void	drivetrain_forward(void);
-void	drivetrain_backward(void);
-void	drivetrain_stop(void);
-void	drivetrain_rotate_left(void);
-void	drivetrain_rotate_right(void);
+	void	init(void);
+	void	forward(void);
+	void	backward(void);
+	void	stop(void);
+	void	rotate_left(void);
+	void	rotate_right(void);
 
+}
 
 #endif

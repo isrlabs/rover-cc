@@ -1,72 +1,32 @@
 extern "C" {
 #include <avr/io.h>
 #include <util/delay.h>
+#include <util/setbaud.h>
+#include <stdio.h>
 
 #include <stdint.h>
+#include <string.h>
 }
 
 #include "hardware/hardware.h"
+#include "hardware/uart.h"
 #include "hardware/drivetrain.h"
+#include "hardware/mast.h"
 
 #define LED1		PH4
 #define LED2		PH5
 
 // Number of ticks to before a transition is required.
-#define DT_TRIGGER_TCK	9
-#define DT_ROT_TRIGGER	6
+#define DT_TRIGGER_TCK	99
+#define DT_ROT_TRIGGER	59
+
+#define SEROUT(x)	uart::writeln((char *)(x))
 
 
-enum DT_STATE {
-	DT_FORWARD,
-	DT_STOP1,
-	DT_TURN,
-	DT_STOP2
-} state;
-
-static void
-dt_transition(void)
-{
-	static uint8_t state_ticks = 0;
-
-	state_ticks++;
-
-	switch (state) {
-	case DT_FORWARD:
-		if (state_ticks < DT_TRIGGER_TCK) {
-			return;
-		}
-		drivetrain_stop();
-		state = DT_STOP1;
-		break;
-	case DT_STOP1:
-		if (state_ticks < DT_TRIGGER_TCK) {
-			return;
-		}
-		drivetrain_rotate_left();
-		state = DT_TURN;
-		break;
-	case DT_TURN:
-		if (state_ticks < DT_ROT_TRIGGER) {
-			return;
-		}
-		drivetrain_stop();
-		state = DT_STOP2;
-		break;
-	case DT_STOP2:
-		if (state_ticks < DT_TRIGGER_TCK) {
-			return;
-		}
-		drivetrain_forward();
-		state = DT_FORWARD;
-		break;
-	default:
-		PORTH |= _BV(LED1) | _BV(LED2);
-		while (true) {}
-	}
-
-	state_ticks = 0;
-}
-
+/*
+ * Beacon controls the LED beacons on the front of the rover. These
+ * flash in sequence and are used to visually identify the rover.
+ */
 void
 beacon(void)
 {
@@ -76,16 +36,16 @@ beacon(void)
 	case 0:
 		PORTH ^= _BV(LED1);
 		break;
-	case 1:
+	case 10:
 		PORTH ^= _BV(LED1);
 		break;
-	case 3:
+	case 30:
 		PORTH ^= _BV(LED2);
 		break;
-	case 4:
+	case 40:
 		PORTH ^= _BV(LED2);
 		break;
-	case 9:
+	case 90:
 		bcn_ticks = 0;
 		return;
 	}
@@ -93,22 +53,80 @@ beacon(void)
 	bcn_ticks++;
 }
 
+
+#define MAST_TURN	100
+
+static void
+mast_step(void)
+{
+	static uint16_t	ticks = 0;
+
+	ticks++;
+	if (ticks < MAST_TURN) {
+		return;
+	}
+
+	ticks = 0;
+	SEROUT("MAST STEP");
+	mast::next();
+
+		mast::E_PING_STATE st;
+		char	ds[64];
+
+		memset(ds, 0, 64);
+		st = mast::state();
+		switch (st) {
+		case mast::PING_FIRE_START:
+			SEROUT("pinging...");
+			break;
+		case mast::PING_FIRE_STOP:
+			SEROUT("stopping ping...");
+			break;
+		case mast::PING_READ_IN:
+			SEROUT("waiting for ping in...");
+			break;
+		case mast::PING_READ_OUT:
+			SEROUT("received response");
+			break;
+		default:
+			SEROUT("unknown mast state");
+		}
+
+
+		struct mast::USR_reading reading = mast::last_distance();
+		sprintf(ds, "D: %u @ %u (%u, %u)", reading.angle, reading.distance,
+		    TCNT3, OCR3A);
+		uart::writeln(ds);
+
+}
+
+
 int
 main()
 {
-	state = DT_STOP2;
+	hardware::init();
+	uart::init();
 
-	hardware_init();
-	drivetrain_init();
-	drivetrain_stop();
+	SEROUT("BOOT OK");
+	mast::init();
+	mast::collision_indicator(true);
+	// mast::self_test();
 
+	drivetrain::init();
+	drivetrain::stop();
+
+	// Activate the beacon LEDs.
 	DDRH |= _BV(LED1) | _BV(LED2);
+	PORTH &= ~(_BV(LED1)|_BV(LED2));
 
-	_delay_ms(1000);
+	SEROUT("READY");
+	// _delay_ms(1000);
+	mast::collision_indicator(false);
+
 	while (1) {
-		dt_transition();
-		beacon();
-		_delay_ms(100);
+		//beacon();
+		mast_step();
+		_delay_ms(10);
 	}
 
 	return 0;

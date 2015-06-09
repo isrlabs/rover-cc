@@ -1,6 +1,10 @@
 extern "C" {
 #include <avr/interrupt.h>
+#include <stdio.h>
+#include <string.h>
 }
+
+#include "hardware/pwm.h"
 
 // The PWM code takes the same approach as the Arduino code: OC1A is
 // used as a tick counter and pins are manually strobed. The previous
@@ -11,12 +15,14 @@ extern "C" {
 // more details.
 
 
-#define CYCLES_PER_US	16
 #define DUTY_CYCLE	20000	// Servo duty cycle is 20ms.
 #define UPDATE_INTERVAL	40000
 #define UPDATE_WAIT	5	// Allow some delay for updates.
 
 // The following pulse ranges are specified in the servo datasheet.
+
+// Note: drivetrain servos (which are continuous rotation) define
+// 1.3ms for their minimum; 
 #define MIN_PULSE	1300	// 1.3ms for full backward rotation.
 #define MID_PULSE	1500	// 1.5ms stop pulse.
 #define MAX_PULSE	1700	// 1.7ms for full forward rotation.
@@ -34,8 +40,9 @@ struct servo {
 
 
 // The servos variable stores all the servos connected to the board.
-#define ACTIVE_SERVOS	2
+#define ACTIVE_SERVOS	3
 static struct servo	servos[ACTIVE_SERVOS] = {
+	{0, MID_PULSE, 0, 0, 0},
 	{0, MID_PULSE, 0, 0, 0},
 	{0, MID_PULSE, 0, 0, 0},
 };
@@ -43,7 +50,7 @@ static volatile int8_t	active = 0;
 
 
 void
-pwm_connect(uint8_t which, uint8_t pin)
+pwm::connect(uint8_t which, uint8_t pin)
 {
 	// Verify servo is active.
 	if (which >= ACTIVE_SERVOS) {
@@ -51,11 +58,31 @@ pwm_connect(uint8_t which, uint8_t pin)
 	}
 
 	servos[which].pin = pin;
+	servos[which].min = MIN_PULSE;
+	servos[which].max = MAX_PULSE;
+	servos[which].trim = 0;
+}
+
+void
+pwm::set_limits(uint8_t which, uint16_t min, uint16_t max)
+{
+	// Verify servo is active.
+	if (which >= ACTIVE_SERVOS) {
+		return;
+	}
+
+	if (min > 0) {
+		servos[which].min = min;
+	}
+
+	if (max > 0) {
+		servos[which].max = max;
+	}
 }
 
 
 void
-pwm_trim(uint8_t which, int16_t trim)
+pwm::trim(uint8_t which, int16_t trim)
 {
 	// Verify servo is active.
 	if (which >= ACTIVE_SERVOS) {
@@ -69,19 +96,19 @@ pwm_trim(uint8_t which, int16_t trim)
 static inline uint16_t
 servo_max(uint8_t which)
 {
-	return MAX_PULSE - UPDATE_WAIT * servos[which].max;
+	return servos[which].max;
 }
 
 
 static inline uint16_t
 servo_min(uint8_t which)
 {
-	return MIN_PULSE - UPDATE_WAIT * servos[which].min;
+	return servos[which].min;
 }
 
 
 void
-pwm_set_servo(uint8_t which, uint32_t us)
+pwm::set_servo(uint8_t which, uint32_t us)
 {
 	uint8_t	saved_SREG;
 
@@ -93,11 +120,11 @@ pwm_set_servo(uint8_t which, uint32_t us)
 	us += servos[which].trim;
 
 	// Verify that pulse time is within acceptable limits.
-	if (us < servo_min(which)) {
-		us = servo_min(which);
+	if (us < servos[which].min) {
+		us = servos[which].min;
 	}
-	else if (us > servo_max(which)) {
-		us = servo_max(which);
+	else if (us > servos[which].max) {
+		us = servos[which].max;
 	}
 
 	us *= 2;
@@ -106,6 +133,18 @@ pwm_set_servo(uint8_t which, uint32_t us)
 	servos[which].tcnt = us;
 	SREG = saved_SREG;
 	sei();
+}
+
+
+uint16_t
+pwm::get_servo(uint8_t which)
+{
+	// Verify that a valid servo is being addressed.
+	if (which >= ACTIVE_SERVOS) {
+		return 0;
+	}
+
+	return (uint16_t)servos[which].tcnt;
 }
 
 

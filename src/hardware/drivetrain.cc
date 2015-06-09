@@ -6,8 +6,8 @@ extern "C" {
 #include "hardware/pwm.h"
 
 
-#define MOTOR_RIGHT	0
-#define MOTOR_LEFT	1
+#define MOTOR_RIGHT	1
+#define MOTOR_LEFT	2
 #define PORT_RIGHT	PB5
 #define PORT_LEFT	PB6
 
@@ -17,51 +17,56 @@ extern "C" {
 
 
 void
-drivetrain_init()
+drivetrain::init()
 {
 	DDRB |= _BV(PORT_RIGHT) | _BV(PORT_LEFT);
 
-	pwm_connect(MOTOR_RIGHT, PORT_RIGHT);
-	pwm_connect(MOTOR_LEFT, PORT_LEFT);
+	pwm::connect(MOTOR_RIGHT, PORT_RIGHT);
+	pwm::connect(MOTOR_LEFT, PORT_LEFT);
+
+	pwm::set_limits(MOTOR_RIGHT, ROTATE_BACKWARD, ROTATE_FORWARD);
+	pwm::set_limits(MOTOR_LEFT, ROTATE_BACKWARD, ROTATE_FORWARD);
+
+	drivetrain::stop();
 }
 
 
 void
-drivetrain_forward()
+drivetrain::forward()
 {
-	pwm_set_servo(MOTOR_RIGHT, ROTATE_BACKWARD);
-	pwm_set_servo(MOTOR_LEFT, ROTATE_FORWARD);
+	pwm::set_servo(MOTOR_RIGHT, ROTATE_BACKWARD);
+	pwm::set_servo(MOTOR_LEFT, ROTATE_FORWARD);
 }
 
 
 void
-drivetrain_stop()
+drivetrain::stop()
 {
-	pwm_set_servo(MOTOR_RIGHT, ROTATE_STOP);
-	pwm_set_servo(MOTOR_LEFT, ROTATE_STOP);
+	pwm::set_servo(MOTOR_RIGHT, ROTATE_STOP);
+	pwm::set_servo(MOTOR_LEFT, ROTATE_STOP);
 }
 
 
 void
-drivetrain_backward()
+drivetrain::backward()
 {
-	pwm_set_servo(MOTOR_RIGHT, ROTATE_FORWARD);
-	pwm_set_servo(MOTOR_LEFT, ROTATE_BACKWARD);
+	pwm::set_servo(MOTOR_RIGHT, ROTATE_FORWARD);
+	pwm::set_servo(MOTOR_LEFT, ROTATE_BACKWARD);
 }
 
 
 void
-drivetrain_rotate_left()
+drivetrain::rotate_left()
 {
-	pwm_set_servo(MOTOR_RIGHT, ROTATE_BACKWARD);
-	pwm_set_servo(MOTOR_LEFT, ROTATE_BACKWARD);
+	pwm::set_servo(MOTOR_RIGHT, ROTATE_BACKWARD);
+	pwm::set_servo(MOTOR_LEFT, ROTATE_BACKWARD);
 }
 
 
 void
-drivetrain_rotate_right()
+drivetrain::rotate_right()
 {
-	pwm_set_servo(MOTOR_RIGHT, ROTATE_BACKWARD);
-	pwm_set_servo(MOTOR_LEFT, ROTATE_FORWARD);
+	pwm::set_servo(MOTOR_RIGHT, ROTATE_BACKWARD);
+	pwm::set_servo(MOTOR_LEFT, ROTATE_FORWARD);
 }
 
