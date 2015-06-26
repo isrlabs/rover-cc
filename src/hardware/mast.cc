@@ -1,51 +1,46 @@
+// The mast namespace contains functions for steering the USR mast and
+// performing distance measurements. The mast consists of a USR mountedd
+// to a servo that swings through a 180 degree arc such that 90 degrees
+// is pointing forward. The USR should take measurements in 45 degree
+// steps, which can be fed to the navigation system.
+
 extern "C" {
+#include <assert.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
+
+#include <stdio.h>
 }
+
 
 #include "hardware/pwm.h"
 #include "hardware/mast.h"
 #include "hardware/uart.h"
 
 
-#define MAST_SERVO	0
-#define MAST_PIN	PB4
+#ifndef NULL
+#define NULL	0
+#endif
 
+#define MAST_SERVO	0
+#define MAST_PIN	PB4	// Digital pin 10
+
+#define CF_PIN		PH3
+#define CF_PORT		PORTH
+#define CF_DDR		DDRH	// Digital pin 6
+
+// The following values are for the servo used to orient the mast.
 #define MAST_MIN	750
 #define MAST_CENTRE	1550
 #define MAST_MAX	2250
 
-
-#define CF_PIN		PH3
-#define CF_PORT		PORTH
-#define CF_DDR		DDRH
-
-#define FIRE_LENGTH	3
-#define FIRE_WAIT	750
-#define FIRE_UPDATE	115
-#define FIRE_MAX	18500
-#define FIRE_REFRESH	200;
-
-#define PING_DDR	DDRE
-#define PING_PORT	PORTE
-#define PING_PIN	PE4
-
-#define MICROSEC_PER_CM	53
-
-
+// Predefine the 0, 45, 90, 135, and 180 degree orientations for the
+// mast. The 0-index corresponds to a 0 degree orientation, which is
+// the rightmost orientation.
 #define MAST_POSITIONS	5
-static uint16_t	mast_position[] = {800, 1125, 1550, 1925, 2250};
-static bool	mast_left = true;
-
-
-static volatile struct {
-	mast::E_PING_STATE	st;
-	uint16_t	read_start;
-	uint16_t	read_stop;
-	uint8_t		angle;
-	uint16_t	distance;
-} USR;
+static uint16_t	mast_position[] = {2250, 1925, 1550, 1125, 800};
+static bool	mast_left = true;	// Mast should turn to the left.
 
 
 void
@@ -60,10 +55,6 @@ mast::init()
 
 	// Set up collision indicator.
 	CF_DDR |= _BV(CF_PIN);
-
-	PING_DDR |= _BV(PING_PIN);
-	PING_PORT &= ~_BV(PING_PIN);
-	USR.st = PING_STOPPED;
 }
 
 
@@ -77,7 +68,7 @@ mast::self_test()
 		_delay_ms(500);
 	}
 
-	pwm::set_servo(MAST_SERVO, mast_position[1]);
+	pwm::set_servo(MAST_SERVO, mast_position[2]);
 }
 
 
@@ -98,7 +89,7 @@ mast::next()
 {
 	static uint8_t	position = 0;
 
-	// pwm::set_servo(MAST_SERVO, mast_position[position]);
+	pwm::set_servo(MAST_SERVO, mast_position[position]);
 	if (mast_left) {
 		if (position == MAST_POSITIONS - 1) {
 			mast_left = false;
@@ -115,24 +106,6 @@ mast::next()
 			position--;
 		}
 	}
-
-	if (USR.st == mast::PING_STOPPED) {
-		USR.st = mast::PING_FIRE_START;
-		TCNT3 = 0;
-		PRR1 &= ~_BV(PRTIM3);
-		OCR3A = FIRE_WAIT;
-	}
-}
-
-
-struct mast::USR_reading
-mast::last_distance()
-{
-	struct mast::USR_reading reading;
-
-	reading.distance = USR.distance;
-	reading.angle = USR.angle;
-	return reading;
 }
 
 
@@ -146,92 +119,10 @@ _mast_angle(void)
 	return uint8_t(((num / den) * 180) / 1000);
 }
 
+
 uint8_t
 mast_angle(void)
 {
-	return (uint8_t)_mast_angle();
-}
-
-
-mast::E_PING_STATE
-mast::state()
-{
-	return USR.st;
-}
-
-
-ISR(TIMER3_COMPA_vect)
-{
-	CF_PORT |= _BV(CF_PIN);
-	switch (USR.st) {
-	case mast::PING_FIRE_START:
-		// To initiate a pulse, set the ping pin as an output
-		// pin and set it high. Then, transition to the next
-		// state and update after FIRE_LENGTH microseconds.
-		PING_DDR |= _BV(PING_PIN);
-		PING_PORT |= _BV(PING_PIN);
-		USR.st = mast::PING_FIRE_STOP;
-		OCR3A = FIRE_LENGTH;
-		TCNT3 = 0;
-		CF_PORT |= _BV(CF_PIN);
-		break;
-	case mast::PING_FIRE_STOP:
-		PING_PORT &= ~_BV(PING_PIN);
-		CF_PORT &= ~_BV(CF_PIN);
-
-		// Reset TCNT3.
-		TCNT3 = 0;
-		OCR3A = FIRE_WAIT;
-
-		USR.st = mast::PING_READ_IN;
-		break;
-	case mast::PING_READ_IN:
-		if (bit_is_set(PING_DDR, PING_PIN)) {
-			mast::collision_indicator(true);
-			PING_DDR &= _BV(PING_PIN);
-			PING_PORT |= _BV(PING_PIN);
-		}
-
-		if (bit_is_set(PING_PORT, PING_PIN)) {
-			TCNT3 = 0;
-			OCR3A = FIRE_UPDATE;
-			USR.st = mast::PING_READ_OUT;
-			USR.read_start = TCNT3;
-		}
-		else if (TCNT3 < FIRE_MAX) {
-			OCR3A = TCNT3+FIRE_LENGTH;
-		}
-		else {
-			USR.st = mast::PING_STOPPED;
-		}
-		break;
-	case mast::PING_READ_OUT:
-		mast::collision_indicator(false);
-		if (bit_is_clear(PING_PORT, PING_PIN)) {
-			USR.read_stop = TCNT3;
-			TCNT3 = 0;
-			OCR3A = FIRE_REFRESH;
-			USR.st = mast::PING_STOPPED;
-		}
-		else {
-			OCR3A = TCNT3+FIRE_LENGTH;
-		}
-		break;
-	default:
-		mast::collision_indicator(false);
-		CF_PORT &= ~_BV(CF_PIN);
-		PING_PORT &= ~_BV(PING_PIN);
-
-		// Reset TCNT3.
-		TCNT3 = 0;
-		OCR3A = FIRE_REFRESH;
-
-		// Disable the timer.
-		PRR1 |= _BV(PRTIM3);
-
-		// Drop any existing interrupts on the timer.
-		TIFR3 |= _BV(OCF3A);
-
-		USR.st = mast::PING_STOPPED;
-	}
+	uint8_t	angle = _mast_angle();
+	return angle;
 }

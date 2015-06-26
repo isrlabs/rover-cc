@@ -16,7 +16,7 @@ initTimer3(void)
 	// Timer3 should only be started by the mast pulse sequence.
 	PRR1 &= ~_BV(PRTIM3);
 
-	TCCR3A = 0;
+	TCCR3A = _BV(WGM32);	// Use CTC mode.
 	TCCR3B = _BV(CS11);	// Set prescaler to 8.
 
 	// Now, Timer3 must be prepared for use.

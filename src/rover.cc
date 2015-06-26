@@ -70,34 +70,6 @@ mast_step(void)
 	SEROUT("MAST STEP");
 	mast::next();
 
-		mast::E_PING_STATE st;
-		char	ds[64];
-
-		memset(ds, 0, 64);
-		st = mast::state();
-		switch (st) {
-		case mast::PING_FIRE_START:
-			SEROUT("pinging...");
-			break;
-		case mast::PING_FIRE_STOP:
-			SEROUT("stopping ping...");
-			break;
-		case mast::PING_READ_IN:
-			SEROUT("waiting for ping in...");
-			break;
-		case mast::PING_READ_OUT:
-			SEROUT("received response");
-			break;
-		default:
-			SEROUT("unknown mast state");
-		}
-
-
-		struct mast::USR_reading reading = mast::last_distance();
-		sprintf(ds, "D: %u @ %u (%u, %u)", reading.angle, reading.distance,
-		    TCNT3, OCR3A);
-		uart::writeln(ds);
-
 }
 
 
@@ -111,6 +83,7 @@ main()
 	mast::init();
 	mast::collision_indicator(true);
 	// Note: once hardware debug is over, add self test here.
+	mast::self_test();
 
 	drivetrain::init();
 	drivetrain::stop();
@@ -121,6 +94,8 @@ main()
 
 	SEROUT("READY");
 	mast::collision_indicator(false);
+
+	drivetrain::forward();
 
 	while (1) {
 		beacon();

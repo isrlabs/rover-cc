@@ -4,28 +4,29 @@
 
 namespace mast {
 
-	struct	USR_reading {
+	struct reading {
 		uint8_t		angle;
-		uint16_t	distance;
+		int16_t		distance;
 	};
 
-	enum E_PING_STATE {
-		PING_FIRE_START,// Initiate echo pulse.
-		PING_FIRE_STOP, // Stop echo pulse.
-		PING_READ_IN,	// Waiting for return pulse.
-		PING_READ_OUT,	// Pulse has returned, disable timer and read dist.
-		PING_STOPPED
-	};
+	// init performs the initial hardware set up.
+	void	init(void);
 
-	bool		check_state(E_PING_STATE);
+	// collision_indicator turns on or off the collision indication
+	// lamp.
+	void	collision_indicator(bool on);
 
-	void		init(void);
-	void		collision_indicator(bool on);
-	void		self_test(void);
-	void		next(void);
-	struct USR_reading	last_distance(void);
-	uint8_t		mast_angle(void);
-	E_PING_STATE	state(void);
+	// self_test causes the mast to step through each of its
+	// positions to ensure the mast servo is working.
+	// TODO: add USR calibration as appropriate.
+	void	self_test(void);
+
+	// next steps the mast to the next position.
+	void	next(void);
+
+	// This returns the current mast angle; it is a value between 0
+	// and 180.
+	uint8_t	mast_angle(void);
 
 }
 
