@@ -116,9 +116,6 @@ Timer16::reset(void)
 	this->clear_interrupts();
 }
 
-namespace timer16 {
-}
-
 
 ISR(TIMER1_COMPA_vect)
 {
