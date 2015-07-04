@@ -18,6 +18,8 @@ TARGET =	rover
 SRCDIR =	src
 BUILDDIR =	build
 SOURCES = 	hardware/hardware.cc	\
+		hardware/timer16.cc	\
+		hardware/taskmgr.cc	\
 		hardware/uart.cc 	\
 		hardware/pwm.cc 	\
 		hardware/drivetrain.cc 	\
@@ -36,7 +38,8 @@ BAUD =		9600
 PORT =		$(shell ls /dev/ttyACM* | head -1)
 BINFORMAT =	ihex
 PGMPROTO =	wiring
-CPPFLAGS =	-Os -Werror -Wall -DF_CPU=$(F_CPU) -mmcu=$(MCU) -Isrc -DBAUD=$(BAUD)
+CPPFLAGS =	-Os -Werror -Wall -DF_CPU=$(F_CPU) -mmcu=$(MCU) \
+		-Isrc -DBAUD=$(BAUD) -std=c++11
 AVRDUDE =	avrdude -D -v -p $(PART) -c $(PROGRAMMER) -P $(PORT)
 SOURCES :=	$(addprefix $(SRCDIR)/, $(SOURCES))
 BUILDTARGET :=	$(addprefix $(BUILDDIR)/, $(TARGET))
