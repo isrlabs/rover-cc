@@ -1,7 +1,5 @@
-namespace std {
 extern "C" {
 #include <stdint.h>
-}
 }
 
 
@@ -34,11 +32,11 @@ class Timer16 {
 	void clear_interrupts(void);
 	void reset(void);
 
-	(void handler)(void);
+	void (handler)(void);
 
 	private:
-	const std::uint8_t	baseptr;
-	const std::uint8_t	timer;
+	const uint8_t	baseptr;
+	const uint8_t	timer;
 };
 
 
@@ -49,9 +47,9 @@ namespace timer16 {
 	void
 	init(void)
 	{
-		timer1.reset();
+		Timer1.reset();
 
-		timer3.set_mode(CTC);
-		timer3.reset();
+		Timer3.set_mode(CTC);
+		Timer3.reset();
 	}
 }

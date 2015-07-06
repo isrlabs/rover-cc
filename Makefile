@@ -24,6 +24,7 @@ SOURCES = 	hardware/hardware.cc	\
 		hardware/pwm.cc 	\
 		hardware/drivetrain.cc 	\
 		hardware/mast.cc
+SOURCES =	hardware/timer16.cc
 
 
 ##############
